@@ -1,0 +1,151 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+
+
+% Тема оформления
+\usetheme{CambridgeUS}
+\usecolortheme{default}
+
+% Уменьшаем шрифт заголовков
+\setbeamerfont{frametitle}{size=\small}
+\sloppy % Перемещено в преамбулу для лучшей практики
+% Опционально: Настройка цветов
+% \definecolor{myblue}{RGB}{0, 114, 189}
+% \setbeamercolor{palette primary}{bg=myblue,fg=white}
+% \setbeamercolor{palette secondary}{bg=myblue!80,fg=white}
+% \setbeamercolor{palette tertiary}{bg=myblue!60,fg=white}
+% \setbeamercolor{palette quaternary}{bg=myblue!40,fg=white}
+% \setbeamercolor{structure}{fg=myblue} % Элементы списка, нумерации и т.д.
+% \setbeamercolor{title}{fg=myblue}
+% \setbeamercolor{frametitle}{fg=myblue}
+\begin{document} % \sloppy удалено отсюда, так как уже в преамбуле
+\title{One-Class SVM}
+\author{Гусев В.А., Волков А.С, Муравьев А.С, Ковтун В.В.}
+\date{\today}
+
+
+
+% Титульный слайд
+\begin{frame}
+    \titlepage 
+\end{frame}
+
+% Введение
+\begin{frame}{Что такое обнаружение аномалий?}
+    \begin{itemize}
+        \item \textbf{Задача:} Найти объекты, которые существенно отличаются от большинства данных.
+        \item \textbf{Применение:}
+        \begin{itemize}
+            \item Обнаружение мошенничества (банковские транзакции).
+            \item Выявление дефектов (производство).
+            \item Мониторинг систем (неполадки оборудования).
+            \item Медицинская диагностика (редкие состояния).
+        \end{itemize}
+        \item \textbf{Особенность:} Часто доступны только "нормальные" данные. Аномалии редки и плохо определены.
+    \end{itemize}
+\end{frame}
+
+% Почему One-Class SVM?
+\begin{frame}{Почему One-Class SVM?}
+    \begin{itemize}
+        \item \textbf{Подход:} Вместо разделения двух классов, OCSVM строит границу вокруг "нормальных" данных.
+        \item \textbf{Цель:} Отделить область, содержащую большинство нормальных объектов, от остального пространства.
+        \item \textbf{Преимущество:} Не требует примеров аномалий для обучения. Обучается только на данных одного класса (нормальных).
+        \item \textbf{Основа:} Расширение идеи Support Vector Machines (SVM).
+    \end{itemize}
+\end{frame}
+
+% Постановка задачи
+\begin{frame}{Постановка задачи One-Class SVM}
+    \begin{itemize}
+        \item \textbf{Идея:} Найти гиперплоскость, которая максимально отделяет обучающие объекты от начала координат.
+        \item \textbf{Цель:} Построить функцию $a(x)$, которая будет положительной для нормальных объектов и отрицательной для аномалий.
+    \end{itemize}
+    \textbf{Оптимизационная задача (прямая форма):}
+    \begin{align*}
+        \min_{w, \xi, \rho} \quad & \frac{1}{2} \|w\|^2 + \frac{1}{\nu \ell} \sum_{i = 1}^{\ell} \xi_i - \rho \\
+        \text{при условиях} \quad & \langle w, x_i \rangle \geq \rho - \xi_i, \quad i = 1, \dots, \ell \\
+        & \xi_i \geq 0, \quad i = 1, \dots, \ell
+    \end{align*}
+\end{frame}
+
+% Пояснение терминов
+\begin{frame}{Пояснение терминов}
+    \begin{itemize}
+        \item $w$: максимизация отступа объектов от гиперплоскости.
+        \item $\rho$: Смещение гиперплоскости от начала координат. Определяет положение границы.
+        \item $\xi_i$: Переменные слабины (slack variables). Позволяют некоторым "нормальным" объектам оказаться за пределами границы, чтобы избежать переобучения.
+        \item $\ell$: Общее количество обучающих объектов.
+        \item $\nu$: Гиперпараметр (от 0 до 1).
+        \begin{itemize}
+            \item Контролирует компромисс между объемом области и количеством ошибок.
+            \item Является верхней границей на долю аномалий в обучающей выборке.
+            \item Является нижней границей на долю опорных векторов.
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+% Решающее правило
+\begin{frame}{Решающее правило}
+    После решения оптимизационной задачи, для нового объекта $x$, его аномальность определяется функцией:
+    \[ 
+        a(x) = \text{sign}\left( \langle w, x \rangle - \rho \right)
+    \]
+    \begin{itemize}
+        \item Если $a(x) = 1$: Объект $x$ считается \textbf{нормальным}.
+        \item Если $a(x) = -1$: Объект $x$ считается \textbf{аномалией} (выбросом).
+    \end{itemize}
+    Граница, разделяющая нормальные объекты от аномалий, определяется условием $\langle w, x \rangle - \rho = 0$.
+\end{frame}
+
+% Ядровой переход
+\begin{frame}{Ядровой переход (Kernel Trick)}
+    \begin{itemize}
+        \item Как и в обычном SVM, OCSVM может использовать ядровой переход для работы с нелинейными границами.
+        \item \textbf{Идея:} Проектировать данные в пространство более высокой размерности, где они становятся линейно разделимыми.
+        \item Это позволяет строить сложные, нелинейные границы вокруг нормальных данных.
+    \end{itemize}
+    \textbf{Решающее правило с ядром:}
+    \[
+        a(x) = \text{sign}\left( \sum_{i = 1}^{\ell} \lambda_i K(x, x_i) - \rho \right)
+    \]
+    \begin{itemize}
+        \item $K(x, x_i)$: Ядровая функция (например, Гауссово RBF-ядро).
+        \item $\lambda_i$: Коэффициенты, полученные из двойственной оптимизационной задачи.
+        \item Объекты $x_i$ с $\lambda_i > 0$ называются \textbf{опорными векторами} (support vectors) и определяют границу.
+    \end{itemize}
+\end{frame}
+
+% Интуиция и интерпретация
+\begin{frame}{Интуиция и интерпретация}
+    \begin{itemize}
+        \item \textbf{Определение границы:} OCSVM эффективно строит компактную область в пространстве признаков, которая охватывает "нормальные" данные.
+        \item \textbf{Сходство с оценкой плотности:} При использовании Гауссова ядра, OCSVM становится очень похожим на метод, который оценивает плотность распределения данных и объявляет аномалиями объекты с низкой плотностью.
+        \item \textbf{Гиперпараметры:}
+        \begin{itemize}
+            \item $\nu$: Контролирует "жесткость" границы и долю аномалий.
+            \item Параметры ядра (например, $\gamma$ для RBF-ядра): Влияют на "гладкость" и форму границы.
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+% Заключение
+\begin{frame}{Заключение}
+    \begin{itemize}
+        \item One-Class SVM — мощный метод для \textbf{обнаружения аномалий}, когда доступны только нормальные данные.
+        \item Строит \textbf{гиперплоскость}, отделяющую нормальные данные от начала координат (или от остального пространства).
+        \item Использует \textbf{ядровой переход} для работы с нелинейными данными.
+        \item Ключевой гиперпараметр $\nu$ контролирует \textbf{долю аномалий} и \textbf{опорных векторов}.
+        \item Эффективен в задачах, где аномалии редки и плохо определены.
+    \end{itemize}
+\end{frame}
+
+\end{document}
